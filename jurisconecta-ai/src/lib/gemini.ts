@@ -35,8 +35,6 @@ function constructFinalPrompt(data: GenerateProps): string {
 
 export async function generateAnalysis(props: GenerateProps): Promise<string> {
   try {
-    // ... (o seu código do try continua igual) ...
-
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const finalPrompt = constructFinalPrompt(props);
 
@@ -49,7 +47,12 @@ export async function generateAnalysis(props: GenerateProps): Promise<string> {
       { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
     ];
 
-    const result = await model.generateContent(finalPrompt, safetySettings);
+    // --- CORREÇÃO APLICADA AQUI ---
+    // Passamos um único objeto contendo o 'contents' e as 'safetySettings'
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+      safetySettings,
+    });
 
     const rawText = result.response.text();
     const startIndex = rawText.indexOf('{');
@@ -61,10 +64,9 @@ export async function generateAnalysis(props: GenerateProps): Promise<string> {
     const jsonString = rawText.substring(startIndex, endIndex + 1);
     return jsonString;
 
-  } catch (error: unknown) { // <-- CORREÇÃO AQUI
+  } catch (error: unknown) {
     console.error('[AI Service] Erro ao gerar conteúdo:', JSON.stringify(error, null, 2));
 
-    // Verificação segura do tipo de erro
     if (error instanceof Error) {
       throw new Error(`Ocorreu um erro ao comunicar com a IA: ${error.message}`);
     }
