@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
 // A tipagem que define os dados que a nossa função precisa
 export type GenerateProps = {
@@ -19,7 +19,7 @@ Baseado nas informações fornecidas, gere um objeto JSON com a seguinte estrutu
 
 Siga rigorosamente estas regras:
 1. Analise a descrição do problema para determinar a área do direito mais apropriada.
-2. Os próximos passos devem ser práticos и diretos.
+2. Os próximos passos devem ser práticos e diretos.
 3. As perguntas essenciais devem ser focadas em obter informações cruciais que estão em falta.
 4. Retorne **somente o objeto JSON válido**, sem nenhum texto explicativo, sem comentários, e sem formatação de markdown.
 5. **Não envolva o JSON entre aspas ou blocos de código.**
@@ -38,49 +38,46 @@ function constructFinalPrompt(data: GenerateProps): string {
 
 
 export async function generateAnalysis(props: GenerateProps): Promise<string> {
-    try {
-        console.log('[AI Service] A gerar análise com os seguintes dados:', JSON.stringify(props, null, 2));
+  try {
+    console.log('[AI Service] A gerar análise com os seguintes dados:', JSON.stringify(props, null, 2));
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-        const finalPrompt = constructFinalPrompt(props);
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const finalPrompt = constructFinalPrompt(props);
 
-        const model = genAI.getGenerativeModel({
-            model: 'gemini-2.0-flash', // O modelo que você confirmou que está correto
-        });
-        
-        // Configurações de segurança para evitar o bloqueio de conteúdo que causava o erro 404
-        const safetySettings = [
-            { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
-            { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
-        ];
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+    });
 
-        // Enviamos o prompt e as configurações de segurança
-        const result = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
-            safetySettings,
-        });
+    // --- CORREÇÃO APLICADA AQUI: Usamos os tipos importados ---
+    const safetySettings = [
+      { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
+      { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
+    ];
 
-        const rawText = result.response.text();
-        console.log('[AI Service] Resposta recebida do Gemini:', rawText);
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: [{ text: finalPrompt }] }],
+      safetySettings,
+    });
 
-        // Lógica de limpeza para garantir que enviamos um JSON puro para o frontend
-        const startIndex = rawText.indexOf('{');
-        const endIndex = rawText.lastIndexOf('}');
-        
-        if (startIndex === -1 || endIndex === -1) {
-          throw new Error("A resposta da IA não continha um objeto JSON válido.");
-        }
+    const rawText = result.response.text();
+    console.log('[AI Service] Resposta recebida do Gemini:', rawText);
 
-        const jsonString = rawText.substring(startIndex, endIndex + 1);
-        
-        console.log('[AI Service] JSON limpo a ser enviado para o frontend:', jsonString);
-        return jsonString;
+    const startIndex = rawText.indexOf('{');
+    const endIndex = rawText.lastIndexOf('}');
 
-    } catch (error: any) {
-        console.error('[AI Service] Erro ao gerar conteúdo:', JSON.stringify(error, null, 2));
-        throw new Error('Ocorreu um erro ao comunicar com a IA.');
+    if (startIndex === -1 || endIndex === -1) {
+      throw new Error("A resposta da IA não continha um objeto JSON válido.");
     }
-}
 
+    const jsonString = rawText.substring(startIndex, endIndex + 1);
+
+    console.log('[AI Service] JSON limpo a ser enviado para o frontend:', jsonString);
+    return jsonString;
+
+  } catch (error: any) {
+    console.error('[AI Service] Erro ao gerar conteúdo:', JSON.stringify(error, null, 2));
+    throw new Error('Ocorreu um erro ao comunicar com a IA.');
+  }
+}
