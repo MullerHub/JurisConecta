@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateAnalysis, GenerateProps } from '@/lib/gemini'; // <--- IMPORTAMOS NOSSO SERVIÇO!
 
 export async function POST(req: NextRequest) {
+
+    console.log('Chave da API carregada:', !!process.env.GEMINI_API_KEY);
   try {
     // 1. Recebe e valida os dados do frontend
     const props = await req.json() as GenerateProps;
