@@ -1,7 +1,7 @@
 export type Lawyer = {
     id: number;
     name: string;
-    specialty: string; // Deve corresponder à "area_direito" da IA
+    specialty: string;
     oab: string;
     city: string;
     rating: number;
@@ -45,11 +45,10 @@ export const mockLawyers: Lawyer[] = [
         rating: 5.0,
         imageUrl: 'https://images.unsplash.com/photo-1541101767792-f9b2b1c4f127?q=80&w=1888&auto=format&fit=crop',
     },
-    // --- NOVOS ADVOGADOS ADICIONADOS ---
     {
         id: 5,
         name: 'Dr. Marcos Oliveira',
-        specialty: 'Direito Penal', // A área que você pediu
+        specialty: 'Direito Penal',
         oab: 'OAB/BA 555.444',
         city: 'Salvador, BA',
         rating: 4.9,
