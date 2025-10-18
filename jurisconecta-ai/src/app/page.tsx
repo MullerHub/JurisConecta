@@ -1,7 +1,15 @@
 "use client";
 
 import React, { useState } from 'react';
-import { mockLawyers, Lawyer } from '@/lib/mock-lawyers'; // Importamos os nossos dados
+import Image from 'next/image';
+import { mockLawyers, Lawyer } from '@/lib/mock-lawyers';
+
+type Analise = {
+  area_direito: string;
+  resumo_caso: string;
+  proximos_passos_sugeridos: string[];
+  perguntas_essenciais_ao_cliente: string[];
+};
 
 const initialFormData = {
   company_name: '',
@@ -11,11 +19,9 @@ const initialFormData = {
 
 export default function App() {
   const [formData, setFormData] = useState(initialFormData);
-  const [analise, setAnalise] = useState<any>(null); // Guardará a análise da IA
+  const [analise, setAnalise] = useState<Analise | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  
-  // Novo estado para controlar a visualização
   const [view, setView] = useState<'form' | 'analysis' | 'lawyers' | 'success'>('form');
   const [filteredLawyers, setFilteredLawyers] = useState<Lawyer[]>([]);
 
@@ -25,16 +31,15 @@ export default function App() {
   };
 
   const handleFindLawyers = () => {
-    // Filtra a lista de advogados com base na especialidade retornada pela IA
+    if (!analise) return; // Proteção para o caso de 'analise' ser nulo
     const compatibleLawyers = mockLawyers.filter(
       lawyer => lawyer.specialty === analise.area_direito
     );
     setFilteredLawyers(compatibleLawyers);
-    setView('lawyers'); // Muda para a visão da lista de advogados
+    setView('lawyers');
   };
-  
+
   const handleSelectLawyer = () => {
-    // Apenas simula o sucesso por agora
     setView('success');
   };
 
@@ -57,16 +62,17 @@ export default function App() {
       const resultText = await response.text();
       const resultJson = JSON.parse(resultText);
       setAnalise(resultJson);
-      setView('analysis'); // Muda para a visão de análise após o sucesso
-    } catch (err: any) {
+      setView('analysis');
+    } catch (err: unknown) { // CORREÇÃO: Usar 'unknown' em vez de 'any'
       console.error(err);
-      setError('Não foi possível gerar a análise. Verifique o console.');
+      const errorMessage = err instanceof Error ? err.message : 'Ocorreu um erro desconhecido.';
+      setError(`Não foi possível gerar a análise. Detalhe: ${errorMessage}`);
       setView('form');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleReset = () => {
     setFormData(initialFormData);
     setAnalise(null);
@@ -83,10 +89,8 @@ export default function App() {
         </header>
 
         <main>
-          {/* VISÃO DO FORMULÁRIO */}
           {view === 'form' && (
             <form onSubmit={handleSubmit} className="bg-slate-800 p-6 rounded-lg shadow-lg">
-              {/* O seu código do formulário aqui... (igual ao anterior) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label htmlFor="company_name" className="block text-sm font-medium text-slate-300 mb-1">Nome do Cliente</label>
@@ -106,14 +110,12 @@ export default function App() {
               </button>
             </form>
           )}
-          
+
           {error && <div className="mt-6 bg-red-900 border border-red-700 text-red-200 p-4 rounded-lg">{error}</div>}
 
-          {/* VISÃO DA ANÁLISE */}
           {view === 'analysis' && analise && (
             <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-bold mb-4 border-b border-slate-700 pb-2">Análise da IA</h2>
-              {/* O seu código da Análise da IA aqui... (igual ao anterior) */}
               <div className="space-y-4">
                 <div><h3 className="font-semibold text-blue-400">Área do Direito</h3><p className="bg-slate-700 p-3 rounded-md mt-1">{analise.area_direito}</p></div>
                 <div><h3 className="font-semibold text-blue-400">Resumo do Caso</h3><p className="bg-slate-700 p-3 rounded-md mt-1">{analise.resumo_caso}</p></div>
@@ -126,15 +128,14 @@ export default function App() {
             </div>
           )}
 
-          {/* VISÃO DA LISTA DE ADVOGADOS */}
-          {view === 'lawyers' && (
+          {view === 'lawyers' && analise && (
             <div className="bg-slate-800 p-6 rounded-lg shadow-lg">
               <h2 className="text-2xl font-bold mb-4">Advogados especialistas em {analise.area_direito}</h2>
               <div className="space-y-4">
                 {filteredLawyers.length > 0 ? (
                   filteredLawyers.map(adv => (
                     <div key={adv.id} className="bg-slate-700 p-4 rounded-lg flex items-center space-x-4">
-                      <img src={adv.imageUrl} alt={adv.name} className="w-20 h-20 rounded-full object-cover" />
+                      <Image src={adv.imageUrl} alt={adv.name} width={80} height={80} className="w-20 h-20 rounded-full object-cover" />
                       <div className="flex-1">
                         <h3 className="text-xl font-bold">{adv.name}</h3>
                         <p className="text-slate-400">{adv.oab} - {adv.city}</p>
@@ -151,16 +152,15 @@ export default function App() {
               </div>
             </div>
           )}
-          
-          {/* VISÃO DE SUCESSO */}
+
           {view === 'success' && (
-             <div className="bg-slate-800 p-8 rounded-lg shadow-lg text-center">
-                <h2 className="text-3xl font-bold text-green-400 mb-4">Solicitação Enviada com Sucesso!</h2>
-                <p className="text-slate-300 mb-6">Os advogados selecionados receberam os detalhes do seu caso e entrarão em contato consigo em breve.</p>
-                <button onClick={handleReset} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition duration-300">
-                  Iniciar Nova Análise
-                </button>
-             </div>
+            <div className="bg-slate-800 p-8 rounded-lg shadow-lg text-center">
+              <h2 className="text-3xl font-bold text-green-400 mb-4">Solicitação Enviada com Sucesso!</h2>
+              <p className="text-slate-300 mb-6">Os advogados selecionados receberam os detalhes do seu caso e entrarão em contato consigo em breve.</p>
+              <button onClick={handleReset} className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md transition duration-300">
+                Iniciar Nova Análise
+              </button>
+            </div>
           )}
         </main>
       </div>
